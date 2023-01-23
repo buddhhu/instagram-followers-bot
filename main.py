@@ -28,7 +28,7 @@ def info():
 	for i in followings:
 		if i not in followers:
 			tot=tot+1
-			print(str(tot)+" "+i)
+			print(f"{str(tot)} {i}")
 	print("\nTotal: "+str(tot))
 
 	print("\nThey follow me but i dont follow them:\n")
@@ -36,21 +36,21 @@ def info():
 	for i in followers:
 		if i not in followings:
 			tot=tot+1
-			print(str(tot)+" "+i)
+			print(f"{str(tot)} {i}")
 	print("\nTotal: "+str(tot))
 
 	print("\nPeople following me:\n")
 	tot = 0
 	for i in followers:
 		tot=tot+1
-		print(str(tot)+" "+i)
+		print(f"{str(tot)} {i}")
 	print("\nTotal: "+str(tot))
 
 	print("\nPeople I follow:\n")
 	tot = 0
 	for i in followings:
 		tot=tot+1
-		print(str(tot)+" "+i)
+		print(f"{str(tot)} {i}")
 	print("\nTotal: "+str(tot))
 
 
@@ -65,10 +65,10 @@ def follow_tag(tag):
 		user_id = i.get("user")["pk"]
 		api.follow(user_id)
 		tot += 1
-		print("Following "+str(username)+" (with id "+str(user_id)+")")
+		print(f"Following {str(username)} (with id {str(user_id)})")
 		if(tot>=MAXIMO):
 			break
-	print("Total: "+str(tot)+" for tag "+tag+" (Max val: "+str(MAXIMO)+")\n")
+	print(f"Total: {str(tot)} for tag {tag} (Max val: {str(MAXIMO)}" + ")\n")
 
 
 def follow_location(target):
@@ -81,10 +81,13 @@ def follow_location(target):
 		user_id = aux_funcs.get_id(username)
 		api.follow(user_id)
 		tot += 1
-		print("Following "+str(username)+" (with id "+str(user_id)+")")
+		print(f"Following {str(username)} (with id {str(user_id)})")
 		if(tot>=MAXIMO):
 			break
-	print("Total: "+str(tot)+" for location "+str(target)+" (Max val: "+str(MAXIMO)+")\n")
+	print(
+		f"Total: {str(tot)} for location {str(target)} (Max val: {str(MAXIMO)}"
+		+ ")\n"
+	)
 
 
 def follow_list(target):
@@ -95,10 +98,13 @@ def follow_list(target):
 		user_id = aux_funcs.get_id(username)
 		api.follow(user_id)
 		tot += 1
-		print("Following "+str(username)+" (with id "+str(user_id)+")")
+		print(f"Following {str(username)} (with id {str(user_id)})")
 		if(tot>=MAXIMO):
 			break
-	print("Total: "+str(tot)+" users followed from "+str(target)+" (Max val: "+str(MAXIMO)+")\n")
+	print(
+		f"Total: {str(tot)} users followed from {str(target)} (Max val: {str(MAXIMO)}"
+		+ ")\n"
+	)
 
 
 def super_followback():
@@ -107,7 +113,7 @@ def super_followback():
 		if i not in followings:
 			count+=1
 			time.sleep(float( random.uniform(min_delay*10,max_delay*10) / 10 ))
-			print(str(count)+") Following back "+i)
+			print(f"{count}) Following back {i}")
 			user_id = aux_funcs.get_id(i)
 			api.follow(user_id)
 
@@ -119,7 +125,7 @@ def super_unfollow():
 		if (i not in followers) and (i not in whitelist):
 			count+=1
 			time.sleep(float( random.uniform(min_delay*10,max_delay*10) / 10 ))
-			print(str(count)+") Unfollowing "+i)
+			print(f"{count}) Unfollowing {i}")
 			user_id = aux_funcs.get_id(i)
 			api.unfollow(user_id)
 
@@ -131,7 +137,7 @@ def unfollowall():
 		if i not in whitelist:
 			count +=1
 			time.sleep(float( random.uniform(min_delay*10,max_delay*10) / 10 ))
-			print(str(count)+") Unfollowing "+i)
+			print(f"{count}) Unfollowing {i}")
 			user_id = aux_funcs.get_id(i)
 			api.unfollow(user_id)
 

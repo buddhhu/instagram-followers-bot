@@ -48,26 +48,31 @@ class InstagramAPI:
         self.uuid = self.generateUUID(True)
 
     def login(self, force = False):
-        if (not self.isLoggedIn or force):
-            self.s = requests.Session()
-            if (self.SendRequest('si/fetch_headers/?challenge_type=signup&guid=' + self.generateUUID(False), None, True)):
+        if self.isLoggedIn and not force:
+            return
+        self.s = requests.Session()
+        if self.SendRequest(
+            f'si/fetch_headers/?challenge_type=signup&guid={self.generateUUID(False)}',
+            None,
+            True,
+        ):
 
-                data = {'phone_id'   : self.generateUUID(True),
-                        '_csrftoken' : self.LastResponse.cookies['csrftoken'],
-                        'username'   : self.username,
-                        'guid'       : self.uuid,
-                        'device_id'  : self.device_id,
-                        'password'   : self.password,
-                        'login_attempt_count' : '0'}
+            data = {'phone_id'   : self.generateUUID(True),
+                    '_csrftoken' : self.LastResponse.cookies['csrftoken'],
+                    'username'   : self.username,
+                    'guid'       : self.uuid,
+                    'device_id'  : self.device_id,
+                    'password'   : self.password,
+                    'login_attempt_count' : '0'}
 
-                if (self.SendRequest('accounts/login/', self.generateSignature(json.dumps(data)), True)):
-                    self.isLoggedIn = True
-                    self.username_id = self.LastJson["logged_in_user"]["pk"]
-                    self.rank_token = "%s_%s" % (self.username_id, self.uuid)
-                    self.token = self.LastResponse.cookies["csrftoken"]
-                    return True;
-                else:
-                    print("Login not successful")
+            if (self.SendRequest('accounts/login/', self.generateSignature(json.dumps(data)), True)):
+                self.isLoggedIn = True
+                self.username_id = self.LastJson["logged_in_user"]["pk"]
+                self.rank_token = f"{self.username_id}_{self.uuid}"
+                self.token = self.LastResponse.cookies["csrftoken"]
+                return True;
+            else:
+                print("Login not successful")
 
 
     def follow(self, userId):
@@ -77,7 +82,9 @@ class InstagramAPI:
         'user_id'       : userId,
         '_csrftoken'    : self.token
         })
-        return self.SendRequest('friendships/create/'+ str(userId) +'/', self.generateSignature(data))
+        return self.SendRequest(
+            f'friendships/create/{str(userId)}/', self.generateSignature(data)
+        )
 
     def unfollow(self, userId):
         data = json.dumps({
@@ -86,7 +93,9 @@ class InstagramAPI:
         'user_id'       : userId,
         '_csrftoken'    : self.token
         })
-        return self.SendRequest('friendships/destroy/'+ str(userId) +'/', self.generateSignature(data))
+        return self.SendRequest(
+            f'friendships/destroy/{str(userId)}/', self.generateSignature(data)
+        )
 
 
     def generateSignature(self, data):
@@ -95,25 +104,30 @@ class InstagramAPI:
         except AttributeError:
             parsedData = urllib.quote(data)
 
-        return 'ig_sig_key_version=' + self.SIG_KEY_VERSION + '&signed_body=' + hmac.new(self.IG_SIG_KEY.encode('utf-8'), data.encode('utf-8'), hashlib.sha256).hexdigest() + '.' + parsedData
+        return (
+            f'ig_sig_key_version={self.SIG_KEY_VERSION}&signed_body='
+            + hmac.new(
+                self.IG_SIG_KEY.encode('utf-8'),
+                data.encode('utf-8'),
+                hashlib.sha256,
+            ).hexdigest()
+            + '.'
+            + parsedData
+        )
 
     def generateDeviceId(self, seed):
         volatile_seed = "12345"
         m = hashlib.md5()
         m.update(seed.encode('utf-8') + volatile_seed.encode('utf-8'))
-        return 'android-' + m.hexdigest()[:16]
+        return f'android-{m.hexdigest()[:16]}'
 
     def generateUUID(self, type):
         generated_uuid = str(uuid.uuid4())
-        if (type):
-            return generated_uuid
-        else:
-            return generated_uuid.replace('-', '')
+        return generated_uuid if type else generated_uuid.replace('-', '')
     
     def SendRequest(self, endpoint, post = None, login = False):
         if (not self.isLoggedIn and not login):
             raise Exception("Not logged in!\n")
-            return;
         self.s.headers.update ({'Connection' : 'close',
                                 'Accept' : '*/*',
                                 'Content-type' : 'application/x-www-form-urlencoded; charset=UTF-8',
@@ -140,9 +154,13 @@ class InstagramAPI:
 
     def getUserFollowers(self, usernameId, maxid = ''):
         if maxid == '':
-            return self.SendRequest('friendships/'+ str(usernameId) +'/followers/?rank_token='+ self.rank_token)
+            return self.SendRequest(
+                f'friendships/{str(usernameId)}/followers/?rank_token={self.rank_token}'
+            )
         else:
-            return self.SendRequest('friendships/'+ str(usernameId) +'/followers/?rank_token='+ self.rank_token + '&max_id='+ str(maxid))
+            return self.SendRequest(
+                f'friendships/{str(usernameId)}/followers/?rank_token={self.rank_token}&max_id={str(maxid)}'
+            )
 
     def getTotalFollowers(self,usernameId):
         followers = []
@@ -151,11 +169,9 @@ class InstagramAPI:
             self.getUserFollowers(usernameId,next_max_id)
             temp = self.LastJson
 
-            for item in temp["users"]:
-                followers.append(item)
-
+            followers.extend(iter(temp["users"]))
             if temp["big_list"] == False:
-                return followers            
+                return followers
             next_max_id = temp["next_max_id"]         
 
     def getTotalSelfFollowers(self):       
@@ -163,19 +179,19 @@ class InstagramAPI:
 
 
     def getUserFollowings(self, usernameId, maxid = ''):
-        url = 'friendships/'+ str(usernameId) +'/following/?'
+        url = f'friendships/{str(usernameId)}/following/?'
         query_string = {
             'ig_sig_key_version': self.SIG_KEY_VERSION,
             'rank_token'        : self.rank_token,
         }
         if maxid:
             query_string['max_id'] = maxid
-        
+
         if sys.version_info >= (3, 0):
             url += urlencode(query_string, quote_via=quote_plus)
         else:
             url += urllib.urlencode(query_string)
-        
+
         return self.SendRequest(url)
 
     def getTotalFollowings(self,usernameId):
@@ -185,40 +201,48 @@ class InstagramAPI:
             self.getUserFollowings(usernameId,next_max_id)
             temp = self.LastJson
 
-            for item in temp["users"]:
-                followers.append(item)
-
+            followers.extend(iter(temp["users"]))
             if temp["big_list"] == False:
-                return followers            
+                return followers
             next_max_id = temp["next_max_id"]
     
     def getTotalSelfFollowings(self):
         return self.getTotalFollowings(self.username_id)
 
     def getPopularFeed(self):
-        popularFeed = self.SendRequest('feed/popular/?people_teaser_supported=1&rank_token='+ str(self.rank_token) +'&ranked_content=true&')
-        return popularFeed
+        return self.SendRequest(
+            f'feed/popular/?people_teaser_supported=1&rank_token={str(self.rank_token)}&ranked_content=true&'
+        )
 
     def tagFeed(self, tag):
-        userFeed = self.SendRequest('feed/tag/'+ str(tag) +'/?rank_token=' + str(self.rank_token) + '&ranked_content=true&')
-        return userFeed
+        return self.SendRequest(
+            f'feed/tag/{str(tag)}/?rank_token={str(self.rank_token)}&ranked_content=true&'
+        )
 
     def getLocationFeed(self, locationId, maxid = ''):
-        return self.SendRequest('feed/location/'+str(locationId)+'/?max_id='+maxid+'&rank_token='+self.rank_token+'&ranked_content=true&')
+        return self.SendRequest(
+            f'feed/location/{str(locationId)}/?max_id={maxid}&rank_token={self.rank_token}&ranked_content=true&'
+        )
 
     def searchLocation(self, query):
-        locationFeed = self.SendRequest('fbsearch/places/?rank_token='+ str(self.rank_token) +'&query=' + str(query))
-        return locationFeed
+        return self.SendRequest(
+            f'fbsearch/places/?rank_token={str(self.rank_token)}&query={str(query)}'
+        )
 
     def uploadPhoto(self, photo, caption = None, upload_id = None):
         if upload_id is None:
             upload_id = str(int(time.time() * 1000))
         data = {
-        'upload_id'         : upload_id,
-        '_uuid'             : self.uuid,
-        '_csrftoken'        : self.token,
-        'image_compression' : '{"lib_name":"jt","lib_version":"1.3.0","quality":"87"}',
-        'photo'             : ('pending_media_%s.jpg'%upload_id, open(photo, 'rb'), 'application/octet-stream', {'Content-Transfer-Encoding':'binary'})
+            'upload_id': upload_id,
+            '_uuid': self.uuid,
+            '_csrftoken': self.token,
+            'image_compression': '{"lib_name":"jt","lib_version":"1.3.0","quality":"87"}',
+            'photo': (
+                f'pending_media_{upload_id}.jpg',
+                open(photo, 'rb'),
+                'application/octet-stream',
+                {'Content-Transfer-Encoding': 'binary'},
+            ),
         }
         m = MultipartEncoder(data, boundary=self.uuid)
         self.s.headers.update ({'X-IG-Capabilities' : '3Q4=',
@@ -229,15 +253,15 @@ class InstagramAPI:
                                 'Content-type': m.content_type,
                                 'Connection' : 'close',
                                 'User-Agent' : self.USER_AGENT})
-        response = self.s.post(self.API_URL + "upload/photo/", data=m.to_string())
-        if response.status_code == 200:
-            if self.configure(upload_id, photo, caption):
-                self.expose()
+        response = self.s.post(f"{self.API_URL}upload/photo/", data=m.to_string())
+        if response.status_code == 200 and self.configure(
+            upload_id, photo, caption
+        ):
+            self.expose()
         return False
 
     def getGeoMedia(self, usernameId):
-        locations = self.SendRequest('maps/user/'+ str(usernameId) +'/')
-        return locations
+        return self.SendRequest(f'maps/user/{str(usernameId)}/')
 
     def getSelfGeoMedia(self):
         return self.getGeoMedia(self.username_id)
